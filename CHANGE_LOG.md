@@ -3,6 +3,8 @@ Maptool 1.7.0
 Lots of enhancements, bug fixes and improvements to the code base.
 
 **Some Highlights**
+- New GM option to disable the use of the Edit Token dialog by players.
+- Issue with decimal point in Map Units per Cell for European locales fixed.
 - New `overlay()` function allows for transparent overlays over the map area. Think MMORPG-like GUI elements.
 - Huge localization effort by Merudo has brought translatable strings to the majority of the MapTool dialogs.
 - MapTool can now import the Dungeondraft VTT export format.
