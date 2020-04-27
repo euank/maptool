@@ -108,17 +108,9 @@ import net.rptools.maptool.client.swing.AbeillePanel;
 import net.rptools.maptool.client.swing.GenericDialog;
 import net.rptools.maptool.client.ui.zone.vbl.TokenVBL;
 import net.rptools.maptool.language.I18N;
-import net.rptools.maptool.model.AssetManager;
-import net.rptools.maptool.model.Association;
-import net.rptools.maptool.model.Grid;
-import net.rptools.maptool.model.HeroLabData;
-import net.rptools.maptool.model.ObservableList;
-import net.rptools.maptool.model.Player;
-import net.rptools.maptool.model.Token;
+import net.rptools.maptool.model.*;
 import net.rptools.maptool.model.Token.TerrainModifierOperation;
 import net.rptools.maptool.model.Token.Type;
-import net.rptools.maptool.model.TokenFootprint;
-import net.rptools.maptool.model.TokenProperty;
 import net.rptools.maptool.model.Zone.Layer;
 import net.rptools.maptool.util.ExtractHeroLab;
 import net.rptools.maptool.util.FunctionUtil;
@@ -297,8 +289,13 @@ public class EditTokenDialog extends AbeillePanel<Token> {
     // Updates the Property Type list.
     updatePropertyTypeCombo();
 
-    // Set the selected item in the Property Type list. Also triggers a itemStateChanged event
+    // Set the selected item in Property Type list. Triggers a itemStateChanged event if index != 0
     getPropertyTypeCombo().setSelectedItem(token.getPropertyType());
+
+    // If index == 0, the itemStateChanged event wasn't triggered, so we update. Fix #1504
+    if (getPropertyTypeCombo().getSelectedIndex() == 0) {
+      updatePropertiesTable((String) getPropertyTypeCombo().getSelectedItem());
+    }
 
     getSightTypeCombo()
         .setSelectedItem(
@@ -499,7 +496,6 @@ public class EditTokenDialog extends AbeillePanel<Token> {
 
   /** Initializes the Property Type dropdown list. */
   public void initPropertyTypeCombo() {
-    updatePropertiesTable((String) getPropertyTypeCombo().getSelectedItem());
     getPropertyTypeCombo()
         .addItemListener(
             new ItemListener() {
@@ -632,7 +628,8 @@ public class EditTokenDialog extends AbeillePanel<Token> {
       getPropertyTable().getCellEditor().stopCellEditing();
     }
     // Commit the changes to the token properties
-    if (!super.commit()) {
+    // If no map available, cancel the commit. Fixes #1646.
+    if (!super.commit() || MapTool.getFrame().getCurrentZoneRenderer() == null) {
       return false;
     }
     // SIZE
@@ -1743,7 +1740,7 @@ public class EditTokenDialog extends AbeillePanel<Token> {
     public void setSelectedObject(Object paramObject) {
       if (paramObject != null) {
         j.setText(paramObject.toString());
-        if (PopupPanel.i == 0) {}
+        if (!PopupPanel.i) {}
       } else {
         j.setText("");
       }
