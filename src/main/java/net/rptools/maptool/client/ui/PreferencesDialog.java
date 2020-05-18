@@ -27,8 +27,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.util.List;
-import java.util.Map.Entry;
-import java.util.ServiceConfigurationError;
 import java.util.stream.Stream;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultComboBoxModel;
@@ -54,14 +52,11 @@ import net.rptools.maptool.client.AppState;
 import net.rptools.maptool.client.MapTool;
 import net.rptools.maptool.client.functions.MediaPlayerAdapter;
 import net.rptools.maptool.client.walker.WalkerMetric;
-import net.rptools.maptool.language.I18N;
 import net.rptools.maptool.model.Grid;
 import net.rptools.maptool.model.GridFactory;
 import net.rptools.maptool.model.Token;
 import net.rptools.maptool.model.Zone;
 import net.rptools.maptool.util.StringUtil;
-import net.rptools.maptool.util.UserJvmPrefs;
-import net.rptools.maptool.util.UserJvmPrefs.JVM_OPTION;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -209,20 +204,6 @@ public class PreferencesDialog extends JDialog {
   private final JCheckBox allowExternalMacroAccessCheckBox;
 
   // Startup
-  private final JTextField jvmXmxTextField;
-  private final JTextField jvmXmsTextField;
-  private final JTextField jvmXssTextField;
-  private final JTextField dataDirTextField;
-
-  private final JCheckBox jvmAssertionsCheckbox;
-  private final JCheckBox jvmDirect3dCheckbox;
-  private final JCheckBox jvmOpenGLCheckbox;
-  private final JCheckBox jvmInitAwtCheckbox;
-
-  private final JComboBox<String> jvmLanguageOverideComboBox;
-
-  private boolean jvmValuesChanged = false;
-
   public PreferencesDialog() {
     super(MapTool.getFrame(), "Preferences", true);
     setDefaultCloseOperation(DISPOSE_ON_CLOSE);
@@ -236,11 +217,6 @@ public class PreferencesDialog extends JDialog {
         new ActionListener() {
           @Override
           public void actionPerformed(java.awt.event.ActionEvent e) {
-            // Warn the user that they changed JVM options and need to restart MapTool for them to
-            // take affect.
-            // Also warn user to double check settings...
-            if (jvmValuesChanged) if (!MapTool.confirm("msg.confirm.jvm.options")) return;
-
             setVisible(false);
             dispose();
             MapTool.getEventDispatcher().fireEvent(MapTool.PreferencesEvent.Changed);
@@ -327,33 +303,6 @@ public class PreferencesDialog extends JDialog {
     allowExternalMacroAccessCheckBox = panel.getCheckBox("allowExternalMacroAccessCheckBox");
     fileSyncPath = panel.getTextField("fileSyncPath");
     fileSyncPathButton = (JButton) panel.getButton("fileSyncPathButton");
-
-    jvmXmxTextField = panel.getTextField("jvmXmxTextField");
-    jvmXmxTextField.setToolTipText(I18N.getText("prefs.jvm.xmx.tooltip"));
-    jvmXmsTextField = panel.getTextField("jvmXmsTextField");
-    jvmXmsTextField.setToolTipText(I18N.getText("prefs.jvm.xms.tooltip"));
-    jvmXssTextField = panel.getTextField("jvmXssTextField");
-    jvmXssTextField.setToolTipText(I18N.getText("prefs.jvm.xss.tooltip"));
-    dataDirTextField = panel.getTextField("dataDirTextField");
-
-    jvmAssertionsCheckbox = panel.getCheckBox("jvmAssertionsCheckbox");
-    jvmAssertionsCheckbox.setToolTipText(
-        I18N.getText("prefs.jvm.advanced.enableAssertions.tooltip"));
-    jvmDirect3dCheckbox = panel.getCheckBox("jvmDirect3dCheckbox");
-    jvmDirect3dCheckbox.setToolTipText(I18N.getText("prefs.jvm.advanced.direct3d.tooltip"));
-    jvmOpenGLCheckbox = panel.getCheckBox("jvmOpenGLCheckbox");
-    jvmOpenGLCheckbox.setToolTipText(I18N.getText("prefs.jvm.advanced.opengl.tooltip"));
-    jvmInitAwtCheckbox = panel.getCheckBox("jvmInitAwtCheckbox");
-    jvmInitAwtCheckbox.setToolTipText(I18N.getText("prefs.jvm.advanced.initAWTbeforeJFX.tooltip"));
-
-    jvmLanguageOverideComboBox = panel.getComboBox("jvmLanguageOverideComboBox");
-    jvmLanguageOverideComboBox.setToolTipText(I18N.getText("prefs.language.override.tooltip"));
-
-    DefaultComboBoxModel<String> languageModel = new DefaultComboBoxModel<String>();
-    for (Entry<String, String> language : UserJvmPrefs.getLanguages())
-      languageModel.addElement(language.getKey());
-
-    jvmLanguageOverideComboBox.setModel(languageModel);
 
     setInitialState();
 
@@ -919,118 +868,6 @@ public class PreferencesDialog extends JDialog {
             }
           }
         });
-    jvmXmxTextField.addFocusListener(
-        new FocusAdapter() {
-          @Override
-          public void focusLost(FocusEvent e) {
-            if (!e.isTemporary()) {
-              String jvmXmx = jvmXmxTextField.getText().trim();
-
-              if (UserJvmPrefs.verifyJvmOptions(jvmXmx)) {
-                UserJvmPrefs.setJvmOption(JVM_OPTION.MAX_MEM, jvmXmx);
-              } else {
-                jvmXmxTextField.setText(JVM_OPTION.MAX_MEM.getDefaultValue());
-                UserJvmPrefs.setJvmOption(JVM_OPTION.MAX_MEM, JVM_OPTION.MAX_MEM.getDefaultValue());
-                log.warn("Invalid JVM Xmx paramater entered: " + jvmXmx);
-              }
-              jvmValuesChanged = true;
-            }
-          }
-        });
-    jvmXmsTextField.addFocusListener(
-        new FocusAdapter() {
-          @Override
-          public void focusLost(FocusEvent e) {
-            if (!e.isTemporary()) {
-              String jvmXms = jvmXmsTextField.getText().trim();
-
-              if (UserJvmPrefs.verifyJvmOptions(jvmXms)) {
-                UserJvmPrefs.setJvmOption(JVM_OPTION.MIN_MEM, jvmXms);
-              } else {
-                jvmXmsTextField.setText(JVM_OPTION.MIN_MEM.getDefaultValue());
-                UserJvmPrefs.setJvmOption(JVM_OPTION.MIN_MEM, JVM_OPTION.MIN_MEM.getDefaultValue());
-                log.warn("Invalid JVM Xms paramater entered: " + jvmXms);
-              }
-              jvmValuesChanged = true;
-            }
-          }
-        });
-    jvmXssTextField.addFocusListener(
-        new FocusAdapter() {
-          @Override
-          public void focusLost(FocusEvent e) {
-            if (!e.isTemporary()) {
-              String jvmXss = jvmXssTextField.getText().trim();
-
-              if (UserJvmPrefs.verifyJvmOptions(jvmXss)) {
-                UserJvmPrefs.setJvmOption(JVM_OPTION.STACK_SIZE, jvmXss);
-              } else {
-                jvmXssTextField.setText(JVM_OPTION.STACK_SIZE.getDefaultValue());
-                UserJvmPrefs.setJvmOption(
-                    JVM_OPTION.STACK_SIZE, JVM_OPTION.STACK_SIZE.getDefaultValue());
-                log.warn("Invalid JVM Xss paramater entered: " + jvmXss);
-              }
-              jvmValuesChanged = true;
-            }
-          }
-        });
-    dataDirTextField.addFocusListener(
-        new FocusAdapter() {
-          @Override
-          public void focusLost(FocusEvent e) {
-            if (!e.isTemporary()) {
-              UserJvmPrefs.setJvmOption(JVM_OPTION.DATA_DIR, dataDirTextField.getText().trim());
-              jvmValuesChanged = true;
-            }
-          }
-        });
-
-    jvmAssertionsCheckbox.addActionListener(
-        new ActionListener() {
-
-          @Override
-          public void actionPerformed(ActionEvent e) {
-            UserJvmPrefs.setJvmOption(JVM_OPTION.ASSERTIONS, jvmAssertionsCheckbox.isSelected());
-            jvmValuesChanged = true;
-          }
-        });
-    jvmDirect3dCheckbox.addActionListener(
-        new ActionListener() {
-          @Override
-          public void actionPerformed(ActionEvent e) {
-            UserJvmPrefs.setJvmOption(JVM_OPTION.JAVA2D_D3D, jvmDirect3dCheckbox.isSelected());
-            jvmValuesChanged = true;
-          }
-        });
-    jvmOpenGLCheckbox.addActionListener(
-        new ActionListener() {
-          @Override
-          public void actionPerformed(ActionEvent e) {
-            UserJvmPrefs.setJvmOption(
-                JVM_OPTION.JAVA2D_OPENGL_OPTION, jvmOpenGLCheckbox.isSelected());
-            jvmValuesChanged = true;
-          }
-        });
-    jvmInitAwtCheckbox.addActionListener(
-        new ActionListener() {
-          @Override
-          public void actionPerformed(ActionEvent e) {
-            UserJvmPrefs.setJvmOption(
-                JVM_OPTION.MACOSX_EMBEDDED_OPTION, jvmInitAwtCheckbox.isSelected());
-            jvmValuesChanged = true;
-          }
-        });
-
-    jvmLanguageOverideComboBox.addItemListener(
-        new ItemListener() {
-          @Override
-          public void itemStateChanged(ItemEvent e) {
-            UserJvmPrefs.setJvmOption(
-                JVM_OPTION.LOCALE_LANGUAGE,
-                jvmLanguageOverideComboBox.getSelectedItem().toString());
-            jvmValuesChanged = true;
-          }
-        });
 
     chatNotificationShowBackground.addActionListener(
         new ActionListener() {
@@ -1259,31 +1096,6 @@ public class PreferencesDialog extends JDialog {
         Integer.toString(AppPreferences.getUpnpDiscoveryTimeout()));
     allowExternalMacroAccessCheckBox.setSelected(AppPreferences.getAllowExternalMacroAccess());
     fileSyncPath.setText(AppPreferences.getFileSyncPath());
-
-    // get JVM User Defaults/User override preferences
-    try {
-      jvmXmxTextField.setText(UserJvmPrefs.getJvmOption(JVM_OPTION.MAX_MEM));
-      jvmXmsTextField.setText(UserJvmPrefs.getJvmOption(JVM_OPTION.MIN_MEM));
-      jvmXssTextField.setText(UserJvmPrefs.getJvmOption(JVM_OPTION.STACK_SIZE));
-      dataDirTextField.setText(UserJvmPrefs.getJvmOption(JVM_OPTION.DATA_DIR));
-
-      jvmAssertionsCheckbox.setSelected(UserJvmPrefs.hasJvmOption(JVM_OPTION.ASSERTIONS));
-      jvmDirect3dCheckbox.setSelected(UserJvmPrefs.hasJvmOption(JVM_OPTION.JAVA2D_D3D));
-      jvmOpenGLCheckbox.setSelected(UserJvmPrefs.hasJvmOption(JVM_OPTION.JAVA2D_OPENGL_OPTION));
-      jvmInitAwtCheckbox.setSelected(UserJvmPrefs.hasJvmOption(JVM_OPTION.MACOSX_EMBEDDED_OPTION));
-
-      jvmLanguageOverideComboBox.setSelectedItem(
-          UserJvmPrefs.getJvmOption(JVM_OPTION.LOCALE_LANGUAGE));
-    } catch (UnsatisfiedLinkError | NoClassDefFoundError | ServiceConfigurationError e) {
-      log.warn(
-          "Warning, unable to get JVM options from preferences. Most likely cause, manual launch of JAR.");
-      tabbedPane.setEnabledAt(tabbedPane.indexOfTab("Startup"), false);
-    } catch (Exception e) {
-      log.error(
-          "Error getting JVM options from preferences. Most likely cause, manual launch of JAR.",
-          e);
-      tabbedPane.setEnabledAt(tabbedPane.indexOfTab("Startup"), false);
-    }
 
     Integer rawVal = AppPreferences.getTypingNotificationDuration();
     Integer typingVal = null;

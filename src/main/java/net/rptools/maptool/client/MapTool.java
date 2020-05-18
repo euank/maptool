@@ -106,7 +106,6 @@ import net.rptools.maptool.server.ServerPolicy;
 import net.rptools.maptool.transfer.AssetTransferManager;
 import net.rptools.maptool.util.StringUtil;
 import net.rptools.maptool.util.UPnPUtil;
-import net.rptools.maptool.util.UserJvmPrefs;
 import net.rptools.maptool.webapi.MTWebAppServer;
 import net.tsc.servicediscovery.ServiceAnnouncer;
 import org.apache.commons.cli.CommandLine;
@@ -1615,10 +1614,6 @@ public class MapTool {
 
       loadCampaignOnStartPath = getCommandLineOption(cmd, "file", "");
       listMacros = getCommandLineOption(cmd, "macros");
-
-      if (getCommandLineOption(cmd, "reset")) {
-        UserJvmPrefs.resetJvmOptions();
-      }
     } catch (ParseException e) {
       // MapTool.showWarning() can be invoked here.  It will log the stacktrace,
       // so there's no need for us to do it.
